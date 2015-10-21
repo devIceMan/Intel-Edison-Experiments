@@ -2,7 +2,6 @@
     host: 'edison.local',
     user: 'root',
     password: 'password',
-    projectName: 'Morze',
-    startFile: 'app.js',
+    projectName: 'morze',    
     sshPort: 22
 }

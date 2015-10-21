@@ -12,7 +12,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>66a2a51e-6d45-4971-b531-cfc62e161056</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>app.js</StartupFile>
+    <StartupFile>morze\app.js</StartupFile>
     <StartWebBrowser>False</StartWebBrowser>
     <SearchPath>
     </SearchPath>
@@ -31,10 +31,17 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="gulpfile.js" />
-    <Compile Include="app.js" />
+    <Compile Include="morze\app.js" />
+    <Content Include=".gitattributes" />
+    <Content Include=".gitignore" />
+    <Content Include="LICENSE" />
+    <Content Include="morze\README.md" />
     <Content Include="package.json" />
     <Content Include="config.js" />
     <Content Include="README.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="morze\" />
   </ItemGroup>
   <!-- Do not delete the following Import Project.  While this appears to do nothing it is a marker for setting TypeScript properties before our import that depends on them. -->
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\TypeScript\Microsoft.TypeScript.targets" Condition="False" />

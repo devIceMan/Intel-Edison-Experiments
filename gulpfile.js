@@ -10,7 +10,7 @@ var r = require,
 // running JsHint on all js files
 gulp.task('jshint', function () {
     var jshint = r('gulp-jshint');
-    gulp.src('./*.js')
+    gulp.src(['./*.js', './' + config.projectName + '/*.js'])
         .pipe(jshint())
         .pipe(jshint.reporter('default'));
 });
@@ -19,7 +19,7 @@ gulp.task('jshint', function () {
 gulp.task('deploy', function () {
     var scp = r('gulp-scp2');
     return gulp
-        .src(['*.{js,json}', '!gulpfile.js', 'readme.md'])
+        .src(['./' + config.projectName + '/*.{js,json}', './' + config.projectName + '/readme.md', '!gulpfile.js'])
         .pipe(scp({
         host: config.host,
         username: config.user,
@@ -43,33 +43,33 @@ gulp.task('restore-packages', function () {
 });
 
 //set startup
-gulp.task('set-startup', function () {
+gulp.task('set-startup', function() {
     var serviceText =
         "[Unit]\n" +
             "    Description = Node startup app service for starting a node process\n" +
             "    After = mdns.service\n" +
             "[Service]\n" +
-            "    ExecStart = /usr/bin/node /home/" + config.user + "/" + config.projectName + "/" + config.startFile + "\n" +
+            "    ExecStart = /usr/bin/node /home/" + config.user + "/" + config.projectName + "/app.js\n" +
             "    Restart = on-failure\n" +
             "    RestartSec = 2s\n" +
             "    Environment=NODE_PATH=/usr/lib/node_modules\n" +
             "[Install]\n" +
             "    WantedBy=default.target\n";
-    
+
     conn = new ssh2Client();
-    conn.on('ready', function () {
-        conn.exec('systemctl stop nodeup.service;' +
+    conn.on('ready', function() {
+            conn.exec('systemctl stop nodeup.service;' +
                 'echo "' + serviceText + '" > /etc/systemd/system/nodeup.service;' +
                 'systemctl daemon-reload;' +
                 'systemctl enable nodeup.service;' +
                 'systemctl start nodeup.service', execCallback);
-    })
+        })
         .connect({
-        host: config.host,
-        port: config.sshPort,
-        username: config.user,
-        password: config.password
-    });
+            host: config.host,
+            port: config.sshPort,
+            username: config.user,
+            password: config.password
+        });
 });
 
 function execCallback(err, stream) {

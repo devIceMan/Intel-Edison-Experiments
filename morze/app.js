@@ -10,12 +10,7 @@ cylon.robot({
             driver: "led", 
             pin: 3, 
             connection: "edison"
-        },
-        red: {
-            driver: "led", 
-            pin: 8, 
-            connection: "edison"
-        },
+        },        
         button: {
             driver: "button",        
             pin: 4, 
@@ -33,20 +28,17 @@ cylon.robot({
     },
     
     work: function () {
-        var me = this;
-        this.blue.turnOn();
+        var me = this;        
         me.setup();
         
         me.button.on('push', function () {
             me.blue.turnOn();
-            me.red.turnOn();            
-            //me.buzzer.digitalWrite(10);
+            me.buzzer.digitalWrite(1);
         });
         
         me.button.on('release', function () {
             me.blue.turnOff();
-            me.red.turnOff();
-            //me.buzzer.digitalWrite(0);
+            me.buzzer.digitalWrite(0);
         });
     }
 }).start();
