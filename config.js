@@ -5,4 +5,4 @@
     projectName: 'morze-lcd',    
     sshPort: 22,
     isDebug: true
-}
+};
