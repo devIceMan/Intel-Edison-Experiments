@@ -5,15 +5,5 @@
     "args": [
         "--no-color"
     ],
-    "tasks": [
-        {
-			"taskName": "ts",
-			"isBuildCommand": false,
-			"showOutput": "always"
-		},{
-            "taskName": "tsd",
-            "isBuildCommand": false,
-            "showOutput": "always"
-        }
-    ]
+    "tasks": []
 }
