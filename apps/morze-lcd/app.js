@@ -87,8 +87,7 @@ cylon.robot({
             str = str + " ";
         }
         console.log(message);
-        me.lcd.setCursor(0, 0);
-        me.lcd.write(str);
+
         switch (color) {
             case "red":
                 me.lcd.setColor(255, 0, 0);
@@ -103,6 +102,9 @@ cylon.robot({
                 me.lcd.setColor(255, 255, 255);
                 break;
         }
+
+        me.lcd.setCursor(0, 0);
+        me.lcd.write(str);
     },
 
     work: function () {
@@ -115,12 +117,12 @@ cylon.robot({
 
             me.pressedTime = new Date().getTime();
             me.blue.turnOn();
-            //me.buzzer.digitalWrite(1);
+            // me.buzzer.digitalWrite(1);
         });
 
         me.button.on('release', function () {
             me.blue.turnOff();
-            //me.buzzer.digitalWrite(0);
+            // me.buzzer.digitalWrite(0);
 
             var time = new Date().getTime() - me.pressedTime;
             me.pressedTime = 0;

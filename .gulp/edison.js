@@ -23,8 +23,8 @@ module.exports = {
     // kill all running processes for this app
     killProcesses: function (gulp, plugins, config) {
         return (function () {
-            var cmd = 'kill -9 $(ps | grep "/home/{user}/{projectName}/app.js"'.format(config)
-                + ' | grep -v grep | awk \'{ print $1 }\')',
+            var cmd = 'ps | grep "/home/{0}/{1}/app.js" | grep -v grep | awk \'{2}\' | xargs kill -9'
+                .format(config.user, config.projectName, '{ print $1 }'),
                 ssh = new plugins.ssh2.Client(),
                 cb = this.sshCallback_.bind(this, ssh),
                 promise = new Promise(function (resolve, reject) {
@@ -136,6 +136,8 @@ module.exports = {
                 console.log(data);
             })
             .stderr.on('data', function (err) {
+                var msg = ('' + err).trim();
+                if (msg == 'kill: you need to specify whom to kill') return;
                 console.log('Error: ' + err);
             });
     }
