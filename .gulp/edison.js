@@ -30,6 +30,7 @@ module.exports = {
                 promise = new Promise(function (resolve, reject) {
                     ssh
                         .on('ready', function () {
+                            console.log('Killing: ' + cmd);
                             ssh.exec(cmd, cb);
                         })
                         .on('end', function () {

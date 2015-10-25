@@ -30,12 +30,3 @@ gulp.task('Edison.Build and Deploy', function (callback) {
         'Edison.Restart',
         callback);
 });
-
-gulp.task('WWW', function (callback) {
-
-     var process = exec('meteor', { cwd: './.www/' }, function (err, stdout, stderr) {
-        console.log(stdout);
-        console.log(stderr);
-        callback(err);
-    });
-});
