@@ -2,7 +2,7 @@
     host: 'edison.local',
     user: 'root',
     password: 'password',
-    projectName: 'morze-lcd',    
+    projectName: 'temperature',
     sshPort: 22,
     isDebug: true
 };

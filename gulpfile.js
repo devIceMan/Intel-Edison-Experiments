@@ -7,7 +7,10 @@ var gulp = require('gulp'),
     config = require('./config'),
     merge = require('merge2'),
     edison = require('./.gulp/edison.js'),
-    runSequence = require('run-sequence');
+    runSequence = require('run-sequence'),
+    exec = require('child_process').exec,
+    run = require('gulp-run'),
+    gutil = require('gulp-util');
 
 gulp.task('TSD Reinstall', require('./.gulp/tsd-reinstall.js')(gulp, plugins));
 gulp.task('JsHint', require('./.gulp/jshint.js')(gulp, plugins, config.projectName));
@@ -16,6 +19,7 @@ gulp.task('Edison.Deploy Code', edison.deployToDevice(gulp, plugins, config));
 gulp.task('Edison.Kill Processes', edison.killProcesses(gulp, ext, config));
 gulp.task('Edison.Restore Packages', edison.restorePackages(gulp, ext, config));
 gulp.task('Edison.Restart', edison.setStartup(gulp, ext, config));
+gulp.task('Edison.Connect', edison.connect(gulp, ext, config));
 
 gulp.task('Edison.Build and Deploy', function (callback) {
     runSequence(
@@ -25,4 +29,13 @@ gulp.task('Edison.Build and Deploy', function (callback) {
         'Edison.Restore Packages',
         'Edison.Restart',
         callback);
+});
+
+gulp.task('WWW', function (callback) {
+
+     var process = exec('meteor', { cwd: './.www/' }, function (err, stdout, stderr) {
+        console.log(stdout);
+        console.log(stderr);
+        callback(err);
+    });
 });

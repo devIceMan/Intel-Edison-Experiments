@@ -30,7 +30,6 @@ module.exports = {
                 promise = new Promise(function (resolve, reject) {
                     ssh
                         .on('ready', function () {
-                            console.log(cmd);
                             ssh.exec(cmd, cb);
                         })
                         .on('end', function () {
@@ -125,6 +124,32 @@ module.exports = {
         }.bind(this);
     },
 
+    connect: function (gulp, plugins, config) {
+        return function () {
+            var ssh = new plugins.ssh2.Client(),
+                promise = new Promise(function (resolve, reject) {
+                    ssh.on('end', function () {
+                        resolve();
+                    })
+                        .on('error', function (err) {
+                            console.log('Error: ' + err);
+                            reject(err);
+                        })
+                        .on('data', function (data) {
+                            console.log(data);
+                        })
+                        .connect({
+                            host: config.host,
+                            port: config.sshPort,
+                            username: config.user,
+                            password: config.password
+                        });
+                });
+
+            return promise;
+        }.bind(this);
+    },
+
     sshCallback_: function (ssh, err, stream) {
         if (err) throw err;
         stream
@@ -133,7 +158,7 @@ module.exports = {
                 ssh.end();
             })
             .on('data', function (data) {
-                console.log(data);
+                console.log('' + data);
             })
             .stderr.on('data', function (err) {
                 var msg = ('' + err).trim();
