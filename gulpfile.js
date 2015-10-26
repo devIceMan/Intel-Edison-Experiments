@@ -10,7 +10,8 @@ var gulp = require('gulp'),
     runSequence = require('run-sequence'),
     exec = require('child_process').exec,
     run = require('gulp-run'),
-    gutil = require('gulp-util');
+    gutil = require('gulp-util'),
+    path = require('path');
 
 gulp.task('TSD Reinstall', require('./.gulp/tsd-reinstall.js')(gulp, plugins));
 gulp.task('JsHint', require('./.gulp/jshint.js')(gulp, plugins, config.projectName));
@@ -29,4 +30,13 @@ gulp.task('Edison.Build and Deploy', function (callback) {
         'Edison.Restore Packages',
         'Edison.Restart',
         callback);
+});
+
+var log = require('winston');
+log.log('info', 'Hello distributed log files!');
+log.info('Hello again distributed logs');
+log.info({
+    data: {
+        g: 1
+    }
 });

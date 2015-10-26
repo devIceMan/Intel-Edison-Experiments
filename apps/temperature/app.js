@@ -1,13 +1,14 @@
 ﻿var cylon = require("cylon"),
     request = require("request"),
-    fs = require('fs'),
+    log = require('winston'),
+    path = require('path'),
     LCD_ADDRESS = 0x3E,
     RGB_ADDRESS = 0x62,
     ABS_ZERO = 273.15,
     ROOM_TEMPERATURE = 298.15,
-    THERMISTOR = 3975;
-    // LCD  = require ('jsupm_i2clcd'),
-    // myLCD = new LCD.Jhd1313m1(0, 0x3E, 0x62);
+    THERMISTOR = 3975,
+    LCD = require('jsupm_i2clcd'),
+    myLCD = new LCD.Jhd1313m1(0, 0x3E, 0x62);
 
 cylon.api({
     host: "0.0.0.0",
@@ -15,8 +16,20 @@ cylon.api({
     ssl: false
 });
 
+log.add(log.transports.File, {
+    filename: path.join(process.cwd(), 'log.txt'),
+    json: true
+});
+
+log.handleExceptions(new log.transports.File({
+    filename: path.join(process.cwd(), 'exceptions.txt'),
+    json: true
+}));
+
+log.info('Starting Temperature Watcher...');
+
 cylon.robot({
-    name: "Temperature Sensor",
+    name: "Temperature Watcher",
     connections: {
         edison: { adaptor: "intel-iot" }
     },
@@ -26,22 +39,23 @@ cylon.robot({
             pin: 0,
             connection: "edison"
         }
-        ,
-        lcd: {
-            driver: 'upm-jhd1313m1',
-            connection: 'edison'
-        }
+        // ,
+        // lcd: {
+        //     driver: 'upm-jhd1313m1',
+        //     connection: 'edison'
+        // }
     },
 
     writeMessage: function (message, color) {
         var me = this,
-            screen = me.lcd,
+            screen = myLCD,
             str = ('' + message).trim();
 
         while (str.length < 16) {
             str = str + " ";
         }
-        console.log(message);
+
+        log.debug('Writing to LCD:', str);
 
         switch (color) {
             case "red":
@@ -71,31 +85,25 @@ cylon.robot({
         return temperature;
     },
 
-    sendObservation: function () {
+    sendObservation: function (buffer) {
         // iotkit-agent credentials needed to connect and submit data
-        var temperature = this.getTemperature(),
-            deviceSpec = require('/usr/lib/node_modules/iotkit-agent/data/device.json'),
+        var deviceSpec = require('/usr/lib/node_modules/iotkit-agent/data/device.json'),
             uname = deviceSpec.device_id,
             accountId = deviceSpec.account_id,
             deviceId = deviceSpec.device_id,
             token = deviceSpec.device_token,
-            comp_name = "Temperature",
             cid = deviceSpec.sensor_list.filter(function (obj) {
-                return obj.name === comp_name;
+                return obj.name === 'Temperature';
             })[0],
-            now = (new Date).getTime(),
+            data = (buffer || []).map(function (x) {
+                return { on: x.Date, cid: cid, value: x.Temperature }
+            }),
             observation = {
                 "accountId": accountId,
                 "did": uname,
-                "on": now,
+                "on": Date.now(),
                 "count": 1,
-                "data": [
-                    {
-                        "on": now,
-                        "value": temperature.toFixed(2),
-                        "cid": cid
-                    }
-                ]
+                "data": data
             },
             requestData = {
                 url: 'https://dashboard.us.enableiot.com/v1/api/data/' + deviceId,
@@ -108,13 +116,11 @@ cylon.robot({
             };
 
         try {
-            //request(requestData);
+            log.debug('Sending data to cloud:', requestData);
+            request(requestData);
         }
         catch (e) {
-            fs.appendFile('./log.txt', JSON.stringify({
-                Error: e,
-                Date: Date.now()
-            }));
+            log.error(e);
         }
     },
 
@@ -125,7 +131,11 @@ cylon.robot({
 
         every((1).second(), function () {
             var temperature = me.getTemperature(),
-                msg = 't = ' + temperature.toFixed(2);
+                msg = 't = ' + temperature.toFixed(2),
+                observation = {
+                    Temperature: temperature,
+                    Date: Date.now()
+                };
 
             var color = 'green';
             if (temperature <= 25) {
@@ -136,19 +146,17 @@ cylon.robot({
             };
 
             me.writeMessage(msg, color);
-            fs.appendFile('./log.txt', JSON.stringify({
-                Temperature: temperature.toFixed(2),
-                Date: Date.now()
-            }));
+            me.temperatureBuffer.push(observation);
+        });
 
+        every((10).second(), function () {
             try {
-                me.sendObservation();
+                var buffer = [].concat(me.temperatureBuffer);
+                me.temperatureBuffer = [];
+                me.sendObservations(buffer);
             }
             catch (e) {
-                fs.appendFile('./log.txt', JSON.stringify({
-                    Error: e,
-                    Date: Date.now()
-                }));
+                log.debug('Could`nt send info to cloud:', e);
             }
         });
     }
