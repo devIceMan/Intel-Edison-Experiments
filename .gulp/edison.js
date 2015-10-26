@@ -12,7 +12,7 @@ module.exports = {
                     host: config.host,
                     username: config.user,
                     password: config.password,
-                    dest: config.projectName
+                    dest: './apps/' + config.projectName
                 }))
                 .on('error', function (err) {
                     console.log('ERR: ' + err);
@@ -23,7 +23,7 @@ module.exports = {
     // kill all running processes for this app
     killProcesses: function (gulp, plugins, config) {
         return (function () {
-            var cmd = 'ps | grep "/home/{0}/{1}/app.js" | grep -v grep | awk \'{2}\' | xargs kill -9'
+            var cmd = 'ps | grep "/home/{0}/apps/{1}/app.js" | grep -v grep | awk \'{2}\' | xargs kill -9'
                 .format(config.user, config.projectName, '{ print $1 }'),
                 ssh = new plugins.ssh2.Client(),
                 cb = this.sshCallback_.bind(this, ssh),
@@ -54,7 +54,7 @@ module.exports = {
 
     restorePackages: function (gulp, plugins, config) {
         return (function () {
-            var cmd = '/usr/bin/node /usr/bin/npm --prefix ./{projectName} install ./{projectName} --production;'.format(config),
+            var cmd = '/usr/bin/node /usr/bin/npm --prefix ./apps/{projectName} install ./apps/{projectName} --production;'.format(config),
                 ssh = new plugins.ssh2.Client(),
                 cb = this.sshCallback_.bind(this, ssh),
                 promise = new Promise(function (resolve, reject) {
@@ -82,7 +82,7 @@ module.exports = {
 
     setStartup: function (gulp, plugins, config) {
         return function () {
-            var appFolder = '/home/{0}/{1}'.format(config.user, config.projectName),
+            var appFolder = '/home/{0}/apps/{1}'.format(config.user, config.projectName),
                 starter = '/usr/bin/node ' + (config.isDebug ? '{0}/RemoteDebug.js {0}/app.js' : '{0}/app.js').format(appFolder),
                 ssh = new plugins.ssh2.Client(),
                 cb = this.sshCallback_.bind(this, ssh),

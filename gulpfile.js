@@ -31,12 +31,3 @@ gulp.task('Edison.Build and Deploy', function (callback) {
         'Edison.Restart',
         callback);
 });
-
-var log = require('winston');
-log.log('info', 'Hello distributed log files!');
-log.info('Hello again distributed logs');
-log.info({
-    data: {
-        g: 1
-    }
-});

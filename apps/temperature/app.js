@@ -1,6 +1,7 @@
-﻿var cylon = require("cylon"),
-    request = require("request"),
-    log = require('winston'),
+﻿var cylon = require('cylon'),
+    request = require('request'),
+    winston = require('winston'),
+    winstonError = require('winston-error'),
     path = require('path'),
     LCD_ADDRESS = 0x3E,
     RGB_ADDRESS = 0x62,
@@ -11,33 +12,35 @@
     myLCD = new LCD.Jhd1313m1(0, 0x3E, 0x62);
 
 cylon.api({
-    host: "0.0.0.0",
-    port: "3500",
+    host: '0.0.0.0',
+    port: '3500',
     ssl: false
 });
 
-log.add(log.transports.File, {
-    filename: path.join(process.cwd(), 'log.txt'),
-    json: true
+var logger = new (winston.Logger)({
+    transports: [
+        new (winston.transports.File)({
+            filename: './home/root/log.txt',
+            json: true
+        })
+    ]
 });
 
-log.handleExceptions(new log.transports.File({
-    filename: path.join(process.cwd(), 'exceptions.txt'),
-    json: true
-}));
+winstonError(logger);
 
-log.info('Starting Temperature Watcher...');
+logger.info('--------------------------------')
+logger.info('Starting Temperature Watcher...');
 
 cylon.robot({
-    name: "Temperature Watcher",
+    name: 'Temperature Watcher',
     connections: {
-        edison: { adaptor: "intel-iot" }
+        edison: { adaptor: 'intel-iot' }
     },
     devices: {
         temperature: {
-            driver: "analogSensor",
+            driver: 'analogSensor',
             pin: 0,
-            connection: "edison"
+            connection: 'edison'
         }
         // ,
         // lcd: {
@@ -54,8 +57,6 @@ cylon.robot({
         while (str.length < 16) {
             str = str + " ";
         }
-
-        log.debug('Writing to LCD:', str);
 
         switch (color) {
             case "red":
@@ -85,25 +86,19 @@ cylon.robot({
         return temperature;
     },
 
-    sendObservation: function (buffer) {
-        // iotkit-agent credentials needed to connect and submit data
+    sendObservation: function (data) {
         var deviceSpec = require('/usr/lib/node_modules/iotkit-agent/data/device.json'),
-            uname = deviceSpec.device_id,
             accountId = deviceSpec.account_id,
             deviceId = deviceSpec.device_id,
             token = deviceSpec.device_token,
-            cid = deviceSpec.sensor_list.filter(function (obj) {
-                return obj.name === 'Temperature';
+            component = deviceSpec.sensor_list.filter(function (obj) {
+                return obj.name === 'temperature';
             })[0],
-            data = (buffer || []).map(function (x) {
-                return { on: x.Date, cid: cid, value: x.Temperature }
-            }),
+            cid = data.componentId = component.cid,
             observation = {
                 "accountId": accountId,
-                "did": uname,
                 "on": Date.now(),
-                "count": 1,
-                "data": data
+                "data": [data]
             },
             requestData = {
                 url: 'https://dashboard.us.enableiot.com/v1/api/data/' + deviceId,
@@ -116,26 +111,50 @@ cylon.robot({
             };
 
         try {
-            log.debug('Sending data to cloud:', requestData);
-            request(requestData);
+
+            var err_handler = function (err) {
+                if (err) throw err;
+            };
+
+            var process_response = function (res, body, callback) {
+                var data = null;
+                if (res.statusCode === 200 || res.statusCode === 201) {
+                    if (res.headers['content-type'] &&
+                        res.headers['content-type'].indexOf('application/json') > -1) {
+                        data = body;
+                    } else {
+                        data = null;
+                    }
+                } else if (res.statusCode === 204) {
+                    data = { status: "Done" };
+                }
+                return callback(data);
+            };
+
+            request(requestData, function (error, response, body) {
+                if (!error && (response.statusCode === 200 ||
+                    response.statusCode === 201 ||
+                    response.statusCode === 204)) {
+                    process_response(response, body, function (json_data) {
+                        return err_handler(null, json_data);
+                    });
+                } else {
+                    error = error || body;
+                    return err_handler(error);
+                }
+            });
         }
         catch (e) {
-            log.error(e);
+            logger.error(e);
         }
     },
 
     work: function () {
         var me = this;
 
-        me.temperatureBuffer = [];
-
         every((1).second(), function () {
             var temperature = me.getTemperature(),
-                msg = 't = ' + temperature.toFixed(2),
-                observation = {
-                    Temperature: temperature,
-                    Date: Date.now()
-                };
+                msg = 't = ' + temperature.toFixed(2);
 
             var color = 'green';
             if (temperature <= 25) {
@@ -146,17 +165,19 @@ cylon.robot({
             };
 
             me.writeMessage(msg, color);
-            me.temperatureBuffer.push(observation);
         });
 
         every((10).second(), function () {
             try {
-                var buffer = [].concat(me.temperatureBuffer);
-                me.temperatureBuffer = [];
-                me.sendObservations(buffer);
+                me.sendObservation({
+                    on: Date.now(),
+                    value: me.getTemperature().toFixed(2)
+                });
             }
             catch (e) {
-                log.debug('Could`nt send info to cloud:', e);
+                logger.error(e);
+            }
+            finally {
             }
         });
     }
