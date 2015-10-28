@@ -2,7 +2,7 @@
     host: 'edison.local',
     user: 'root',
     password: 'password',
-    projectName: 'temperature',
+    projectName: 'game',
     sshPort: 22,
     isDebug: true
 };

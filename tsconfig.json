@@ -1,0 +1,10 @@
+{
+ "files": [
+   "./.typings/tsd.d.ts"
+ ],
+
+ "compilerOptions": {
+   "target": "ES6",
+   "module": "commonjs"
+ }
+}

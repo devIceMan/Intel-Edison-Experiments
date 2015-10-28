@@ -5,5 +5,12 @@
     "args": [
         "--no-color"
     ],
-    "tasks": [] 
+    "tasks": [{
+        "isBuildCommand": true,
+        "taskName": "TypeScript Compiler",
+        "showOutput": "always"
+    },{
+        "isBuildCommand": false,
+        "taskName": "Edison.Build and Deploy"
+    }]
 }

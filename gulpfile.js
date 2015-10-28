@@ -13,6 +13,23 @@ var gulp = require('gulp'),
     gutil = require('gulp-util'),
     path = require('path');
 
+gulp.task('Restore Packages', plugins.shell.task('npm install', {
+    interactive: true
+}));
+gulp.task('TypeScript Compiler', function () {
+    return gulp
+        .src('./common/edison-utils/*.ts')
+        .pipe(plugins.typescript({
+            module: 'commonjs',
+            target: 'ES5',
+            noEmitOnError: true,
+            moduleResolution: 'node',
+            sortOutput: true
+        }))
+        .pipe(plugins.concat('edison-utils.js'))
+        .pipe(gulp.dest('./common/'));
+});
+
 gulp.task('TSD Reinstall', require('./.gulp/tsd-reinstall.js')(gulp, plugins));
 gulp.task('JsHint', require('./.gulp/jshint.js')(gulp, plugins, config.projectName));
 

@@ -4,8 +4,7 @@ module.exports = {
             return gulp
                 .src([
                     './package.json',
-                    './apps/' + config.projectName + '/*.{js,json}',
-                    './apps/' + config.projectName + '/readme.md',
+                    './apps/' + config.projectName + '/**/*',
                     './common/*.{js,json}',
                     '!gulpfile.js'])
                 .pipe(plugins.scp2({
@@ -20,10 +19,10 @@ module.exports = {
         };
     },
 
-    // kill all running processes for this app
+    // kill all running processes for all apps
     killProcesses: function (gulp, plugins, config) {
         return (function () {
-            var cmd = 'ps | grep "/home/{0}/apps/{1}/app.js" | grep -v grep | awk \'{2}\' | xargs kill -9'
+            var cmd = 'ps | grep "node /home/{0}/apps/.*/app.js" | grep -v grep | awk \'{2}\' | xargs kill -9'
                 .format(config.user, config.projectName, '{ print $1 }'),
                 ssh = new plugins.ssh2.Client(),
                 cb = this.sshCallback_.bind(this, ssh),

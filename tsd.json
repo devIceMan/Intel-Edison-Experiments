@@ -6,7 +6,7 @@
   "bundle": ".typings/tsd.d.ts",
   "installed": {
     "node/node.d.ts": {
-      "commit": "44cbde48eecd1918ed54b3be49a9752688b6c65a"
+      "commit": "62eedc3121a5e28c50473d2e4a9cefbcb9c3957f"
     },
     "debug/debug.d.ts": {
       "commit": "32f0a90dab26f70b206407ac24d4d622d0f0f408"
@@ -25,6 +25,9 @@
     },
     "run-sequence/run-sequence.d.ts": {
       "commit": "44cbde48eecd1918ed54b3be49a9752688b6c65a"
+    },
+    "winston/winston.d.ts": {
+      "commit": "62eedc3121a5e28c50473d2e4a9cefbcb9c3957f"
     }
   }
 }
