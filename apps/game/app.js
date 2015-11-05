@@ -12,7 +12,7 @@
     lcdWriter = edisonUtils.getWriter(myLCD),
     logger = edisonUtils.createLogger(__dirname),
     upm_grove = require('jsupm_grove'),
-    groveRotary = new upm_grove.GroveRotary(0),
+    groveRotary = new upm_grove.GroveRotary(3),
     digitalAccelerometer = require('jsupm_mma7660');
 
 cylon.api({
@@ -62,120 +62,167 @@ cylon.robot({
     devices: {
         blue: {
             driver: "led",
-            pin: 4,
+            pin: 2,
             connection: "edison"
         },
         button: {
             driver: "button",
             pin: 3,
             connection: "edison"
-        },
-        angle: {
-            driver: 'analogSensor',
-            pin: 0,
-            connection: 'edison'
         }
     },
 
-    getVibro: function () {
-        var me = this,
-            rawData = me.vibro.analogRead();
+    initAccel: function () {
+        // Instantiate an MMA7660 on I2C bus 0
+        this.accel = new digitalAccelerometer.MMA7660(
+            digitalAccelerometer.MMA7660_I2C_BUS,
+            digitalAccelerometer.MMA7660_DEFAULT_I2C_ADDR);
+        // place device in standby mode so we can write registers
+        this.accel.setModeStandby();
+        // enable 64 samples per second
+        this.accel.setSampleRate(digitalAccelerometer.MMA7660.AUTOSLEEP_64);
+        // place device into active mode
+        this.accel.setModeActive();
 
-        if (isNaN(rawData)) return 0;
+        this.x = digitalAccelerometer.new_intp();
+        this.y = digitalAccelerometer.new_intp();
+        this.z = digitalAccelerometer.new_intp();
 
-        return rawData;
+        this.ax = digitalAccelerometer.new_floatp();
+        this.ay = digitalAccelerometer.new_floatp();
+        this.az = digitalAccelerometer.new_floatp();
+
+        this.lastX = 0;
+        this.lastY = 0;
+        this.lastZ = 0;
+    },
+
+    releaseAccel: function(){
+        digitalAccelerometer.delete_intp(this.x);
+        digitalAccelerometer.delete_intp(this.y);
+        digitalAccelerometer.delete_intp(this.z);
+
+        digitalAccelerometer.delete_floatp(this.ax);
+        digitalAccelerometer.delete_floatp(this.ay);
+        digitalAccelerometer.delete_floatp(this.az);
+
+        this.accel.setModeStandby();
+    },
+
+    roundNum: function (num, decimalPlaces) {
+        // round off output to match C example, which has 6 decimal places
+        var extraNum = (1 / (Math.pow(10, decimalPlaces) * 1000));
+        return (Math.round((num + extraNum) * (Math.pow(10, decimalPlaces))) / Math.pow(10, decimalPlaces));
+    },
+
+    getAcceleration: function () {
+        this.accel.getAcceleration(this.ax, this.ay, this.az);
+        return {
+            x: this.roundNum(digitalAccelerometer.floatp_value(this.ax), 6),
+            y: this.roundNum(digitalAccelerometer.floatp_value(this.ay), 6),
+            z: this.roundNum(digitalAccelerometer.floatp_value(this.az), 6)
+        };
+    },
+
+    getCoords: function (f) {
+        f = f || 1;
+        this.accel.getRawValues(this.x, this.y, this.z);
+
+        var m = 1;
+        if (this.getBackFront() == 'BACK') m = -1;
+
+        var dx = digitalAccelerometer.intp_value(this.x) * m,
+            dy = digitalAccelerometer.intp_value(this.y),
+            dz = digitalAccelerometer.intp_value(this.z);
+
+        if (true || Math.abs(this.lastX - dx) > f) {
+            this.lastX = dx;
+        }
+
+        if (true || Math.abs(this.lastY - dy) > f) {
+            this.lastY = dy;
+        }
+
+        if (true || Math.abs(this.lastZ - dz) > f) {
+            this.lastZ = dz;
+        }
+
+        return {
+            x: this.lastX,
+            y: this.lastY,
+            z: this.lastZ
+        };
+    },
+
+    getTaped: function(){
+        return this.accel.tiltTap();
+    },
+
+    getRotation: function () {
+        this.lastRotation = this.lastRotation || 0;
+        return groveRotary.rel_deg();
+    },
+
+    getBackFront: function () {
+        var tbf = this.accel.tiltBackFront();
+        switch (tbf) {
+            case 0x00: return 'UNKNOWN';
+            case 0x01: return 'FRONT';
+            case 0x02: return 'BACK';
+            default: return 'UNKNOWN';
+        }
+    },
+
+    getLP: function(){
+        var lp = this.accel.tiltLandscapePortrait();
+            switch (lp) {
+                case 0x01: return 'LEFT';
+                case 0x02: return 'RIGHT';
+                case 0x05: return 'UP';
+                case 0x06: return 'DOWN';
+                case 0x00: return 'UNKNONW';
+                default: return 'UNKNONW';
+            }
+    },
+
+    printData: function(){
+        var c = this.getCoords(1),
+            bf = this.getBackFront(),
+            lp = this.getLP(),
+            r = this.getRotation();
+
+        lcdWriter([ "x=" + c.x + " y=" + c.y + " z=" + c.z,
+        bf+'-'+lp+ ' R:' + r.toFixed(0) ]);
+
+        console.log([ "x=" + c.x + " y=" + c.y + " z=" + c.z,
+        bf+'-'+lp+ ' R:' + r.toFixed(0) ]);
     },
 
     work: function () {
         var me = this;
-        me.ready = false;
 
-        // Instantiate an MMA7660 on I2C bus 0
-        var myDigitalAccelerometer = new digitalAccelerometer.MMA7660(
-            digitalAccelerometer.MMA7660_I2C_BUS,
-            digitalAccelerometer.MMA7660_DEFAULT_I2C_ADDR);
-        // place device in standby mode so we can write registers
-        myDigitalAccelerometer.setModeStandby();
-        // enable 64 samples per second
-        myDigitalAccelerometer.setSampleRate(digitalAccelerometer.MMA7660.AUTOSLEEP_64);
-        // place device into active mode
-        myDigitalAccelerometer.setModeActive();
-
-        var x, y, z;
-        x = digitalAccelerometer.new_intp();
-        y = digitalAccelerometer.new_intp();
-        z = digitalAccelerometer.new_intp();
-
-        var ax, ay, az;
-        ax = digitalAccelerometer.new_floatp();
-        ay = digitalAccelerometer.new_floatp();
-        az = digitalAccelerometer.new_floatp();
-
-        var ix = 0, iy = 0, iz = 0;
-        var buffer = [];
-
+        me.initAccel();
+        console.log('start');
         var lastDeg = 0;
         var myInterval = setInterval(function () {
-            myDigitalAccelerometer.getRawValues(x, y, z);
-            var dx = digitalAccelerometer.intp_value(x),
-                dy = digitalAccelerometer.intp_value(y),
-                dz = digitalAccelerometer.intp_value(z);
+            var c = me.getCoords();
+            me.printData();
 
-            myDigitalAccelerometer.getAcceleration(ax, ay, az);
-            var dax = roundNum(digitalAccelerometer.floatp_value(ax), 6),
-                day = roundNum(digitalAccelerometer.floatp_value(ay), 6),
-                daz = roundNum(digitalAccelerometer.floatp_value(az), 6);
+            var rotation = me.getRotation();
 
-            var str1 = "x=" + dx + " y=" + dy + " z=" + dz;
-
-            myDigitalAccelerometer.getAcceleration(ax, ay, az);
-            //var str2 = "x=" + dax + " y=" + day + " z=" + daz;
-            var rel_deg = groveRotary.rel_deg();
-            var str2 = groveRotary.rel_deg().toFixed(1);
-            //var str2 = "x=" + ix + " y=" + iy + " z=" + iz;
-
-            if (Math.abs(lastDeg - rel_deg) > 1){
+            if (Math.abs(lastDeg - rotation) > 1) {
                 io.sockets.emit('turn', {
-                    // dx: dx, dy: dy, dz: dz,
-                    // dax: dax, day: day, daz: daz
-                    dx: (lastDeg - rel_deg) * 10
+                    dx: (lastDeg - rotation) * 10
                 });
-                lastDeg = rel_deg;
+                lastDeg = rotation;
             }
 
-            lcdWriter([str1, str2]);
-
+            // if (me.getTaped()){
+            //     io.sockets.emit('shot', {
+            //         force: 10
+            //     });
+            // }
         }, 150);
-
-        // round off output to match C example, which has 6 decimal places
-        function roundNum(num, decimalPlaces) {
-            var extraNum = (1 / (Math.pow(10, decimalPlaces) * 1000));
-            return (Math.round((num + extraNum) * (Math.pow(10, decimalPlaces))) / Math.pow(10, decimalPlaces));
-        }
-
-        // When exiting: clear interval and print message
-        process.on('SIGINT', function () {
-            clearInterval(myInterval);
-
-            // clean up memory
-            digitalAccelerometer.delete_intp(x);
-            digitalAccelerometer.delete_intp(y);
-            digitalAccelerometer.delete_intp(z);
-
-            digitalAccelerometer.delete_floatp(ax);
-            digitalAccelerometer.delete_floatp(ay);
-            digitalAccelerometer.delete_floatp(az);
-
-            myDigitalAccelerometer.setModeStandby();
-
-            console.log("Exiting...");
-            process.exit(0);
-        });
-
-        // me.angle.on('analogRead', function (data) {
-        //     lcdWriter([groveRotary.abs_value().toFixed(1) + ',' + groveRotary.rel_value().toFixed(1),
-        //         groveRotary.abs_deg().toFixed(1) + ',' + groveRotary.rel_deg().toFixed(1)]);
-        // });
 
         me.button.on('push', function () {
             me.time = Date.now();
@@ -190,12 +237,6 @@ cylon.robot({
             io.sockets.emit('shot', {
                 force: time
             });
-
-            lcdWriter('Shot!', 'green');
-            me.timeout = setTimeout(function () {
-                lcdWriter('');
-                clearTimeout(me.timeout);
-            }, 500);
         });
     }
 }).start();

@@ -42,22 +42,18 @@ var PointerLockControls = function (camera, cannonBody) {
             canJump = true;
     });
 
+    this.turnX = function (value) {
+        yawObject.rotation.y -= -value * 0.002;
+    }
+
+    this.turnY = function (value) {
+        pitchObject.rotation.x -= -value * 0.002;
+        pitchObject.rotation.x = Math.max(- PI_2, Math.min(PI_2, pitchObject.rotation.x));
+    }
+
     var velocity = cannonBody.velocity;
 
     var PI_2 = Math.PI / 2;
-
-    var onMouseMove = function (event) {
-
-        if (scope.enabled === false) return;
-
-        var movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
-        var movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
-
-        yawObject.rotation.y -= movementX * 0.002;
-        pitchObject.rotation.x -= movementY * 0.002;
-
-        pitchObject.rotation.x = Math.max(- PI_2, Math.min(PI_2, pitchObject.rotation.x));
-    };
 
     var turnFactor = 75;
     var onKeyDown = function (event) {
@@ -73,11 +69,11 @@ var PointerLockControls = function (camera, cannonBody) {
                 break;
 
             case 37: // left
-                yawObject.rotation.y -= -turnFactor * 0.002;
+                this.turnX(turnFactor);
                 break;
 
             case 39: // right
-                yawObject.rotation.y -= turnFactor * 0.002;
+                this.turnX(-turnFactor);
                 break;
 
             case 87: // w
@@ -103,7 +99,7 @@ var PointerLockControls = function (camera, cannonBody) {
                 break;
         }
 
-    };
+    }.bind(this);
 
     var onKeyUp = function (event) {
 
@@ -129,7 +125,6 @@ var PointerLockControls = function (camera, cannonBody) {
 
     };
 
-    document.addEventListener('mousemove', onMouseMove, false);
     document.addEventListener('keydown', onKeyDown, false);
     document.addEventListener('keyup', onKeyUp, false);
 
@@ -142,18 +137,6 @@ var PointerLockControls = function (camera, cannonBody) {
     this.getDirection = function (targetVec) {
         targetVec.set(0, 0, -1);
         quat.multiplyVector3(targetVec);
-    }
-
-    this.turnX = function(value){
-        // positive values - right
-        // negative values - left
-        yawObject.rotation.y -= -value * 0.002;
-    }
-
-    this.turnY = function(value){
-        // positive values - up
-        // negative values - down
-        pitchObject.rotation.x -= -value * 0.002;
     }
 
     // Moves the camera to the Cannon.js object position and adds velocity to the object if the run key is down
